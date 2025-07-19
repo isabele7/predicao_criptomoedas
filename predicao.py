@@ -152,3 +152,64 @@ def executar_predicao(df, target_col, dias_a_frente=1, modelo='LinearRegression'
         return predicao_classificacao(df, target_col, dias_a_frente, modelo_nome=modelo, modelo_params=modelo_params, n_lags=n_lags, ma_window=ma_window)
     else:
         return predicao_regressao(df, target_col, dias_a_frente, modelo_nome=modelo, prever_retorno=prever_retorno, modelo_params=modelo_params, n_lags=n_lags, ma_window=ma_window)
+
+
+# 4. Funções wrapper para integração com Streamlit
+def predizer_regressao(df, target_col, dias_previsao, modelos_escolhidos, n_lags=7, ma_window=5, params=None):
+    resultados = pd.DataFrame(index=df.index)
+    metricas = {}
+    
+    # Divisão entre treino (75%) e teste (25%)
+    split = int(0.75 * len(df))
+    idx_test = df.index[split:]
+    
+    for modelo in modelos_escolhidos:
+        # Executa predição para cada modelo
+        modelo_params = params.get(modelo, {}) if params else {}
+        y_test, y_pred, metricas_modelo = predicao_regressao(
+            df=df,
+            target_col=target_col,
+            dias_a_frente=dias_previsao,
+            modelo_nome=modelo,
+            prever_retorno=False,
+            n_lags=n_lags,
+            ma_window=ma_window,
+            modelo_params=modelo_params
+        )
+        
+        # Adiciona resultados ao DataFrame
+        resultados.loc[y_test.index, 'Real'] = y_test.values
+        resultados.loc[y_test.index, f'{modelo}'] = y_pred
+        
+        # Organiza métricas por modelo e dia
+        metricas[modelo] = {dias_previsao: metricas_modelo}
+    
+    return resultados, metricas, idx_test
+
+def predizer_classificacao(df, target_col, dias_previsao, modelos_escolhidos, n_lags=7, ma_window=5, params=None):
+    resultados = pd.DataFrame(index=df.index)
+    metricas = {}
+    
+    # Calcula o índice de teste (últimos 25% dos dados)
+    split = int(0.75 * len(df))
+    idx_test = df.index[split:]
+    
+    for modelo in modelos_escolhidos:
+        # Executa predição para cada modelo
+        modelo_params = params.get(modelo, {}) if params else {}
+        y_test, y_pred, metricas_modelo = predicao_classificacao(
+            df=df,
+            target_col=target_col,
+            dias_a_frente=dias_previsao,
+            modelo_nome=modelo,
+            n_lags=n_lags,
+            ma_window=ma_window,
+            modelo_params=modelo_params
+        )
+        
+        resultados.loc[y_test.index, 'Classe_Real'] = y_test.values
+        resultados.loc[y_test.index, f'Classe_{modelo}'] = y_pred
+        
+        metricas[modelo] = {dias_previsao: metricas_modelo}
+    
+    return resultados, metricas, idx_test
