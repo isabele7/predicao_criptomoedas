@@ -5,14 +5,14 @@ import plotly.graph_objects as go
 from dados import montar_dataframe
 from predicao import predizer_regressao, predizer_classificacao
 
-st.set_page_config(page_title="Sistema de Predição de Criptomoedas", layout="wide")
+st.set_page_config(page_title="Sistema de predição de criptomoedas", layout="wide")
 st.title("Sistema de predição de criptomoedas")
 
 with st.sidebar:
-    st.header("Configurações do Sistema")
-    st.subheader("Tipo de Análise")
+    st.header("Configurações do sistema")
+    st.subheader("Tipo de análise")
     tipo_analise = st.radio("Escolha o tipo:", ["Regressão (Valor)", "Classificação (Tendência)"])
-    st.subheader("Seleção de Dados")
+    st.subheader("Seleção de dados")
     # Criptomoedas alvo 
     moeda_alvo = st.selectbox(
         "Criptomoeda Alvo", 
@@ -37,14 +37,14 @@ with st.sidebar:
         help="Selecione os ativos que serão usados como variáveis preditoras"
     )
     
-    st.subheader("Período dos Dados")
+    st.subheader("Período dos dados")
     col1, col2 = st.columns(2)
     with col1:
         inicio = st.date_input("Data Início", value=pd.to_datetime("2023-01-01"))
     with col2:
         fim = st.date_input("Data Fim", value=pd.to_datetime("2024-06-01"))
 
-    st.subheader("Configurações do Modelo")
+    st.subheader("Configurações do modelo")
 
     dias_pred = st.selectbox(
         "Horizonte de Predição", 
@@ -53,7 +53,7 @@ with st.sidebar:
         help="Quantos dias à frente prever"
     )
 
-    st.subheader("Configurações de Janelamento")
+    st.subheader("Configurações de janelamento")
     n_lags = st.slider("Número de Lags", 3, 20, 7, help="Quantos dias anteriores usar como features")
     ma_window = st.slider("Janela da Média Móvel", 3, 15, 5, help="Tamanho da janela para média móvel")
 
@@ -74,7 +74,7 @@ with st.sidebar:
         )
     
     st.subheader("Parametrização")
-    with st.expander("Configurações dos Algoritmos"):
+    with st.expander("Configurações dos algoritmos"):
         if 'RandomForest' in modelos:
             st.write("**Random Forest**")
             n_trees = st.slider("Número de árvores", 10, 200, 100)
@@ -415,3 +415,32 @@ if executar:
                     
             except Exception as e:
                 st.error(f"Erro na predição de classificação: {str(e)}")
+
+if st.checkbox("Visualizar dados carregados"):
+    if auxiliares:  
+        with st.spinner("Carregando amostra dos dados..."):
+            try:
+                df_sample = montar_dataframe(moeda_alvo, auxiliares[:3], inicio.isoformat(), fim.isoformat())  # Limita a 3 auxiliares para amostra
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("Registros", len(df_sample))
+                    st.metric("Período", f"{(df_sample.index.max() - df_sample.index.min()).days} dias")
+                
+                with col2:
+                    st.metric("Colunas", len(df_sample.columns))
+                    st.metric("Ativo Alvo", moeda_alvo)
+                
+                if moeda_alvo in df_sample.columns:
+                    fig_sample = px.line(df_sample, y=moeda_alvo, 
+                                       title=f"Série Temporal - {moeda_alvo}")
+                    fig_sample.update_layout(height=300)
+                    st.plotly_chart(fig_sample, use_container_width=True)
+
+                    st.subheader("Amostra dos dados")
+                    st.dataframe(df_sample.head(10), use_container_width=True)
+                
+            except Exception as e:
+                st.error(f"Erro ao carregar amostra: {str(e)}")
+    else:
+        st.info("Selecione alguns ativos auxiliares para visualizar os dados.")
