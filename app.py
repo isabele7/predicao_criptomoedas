@@ -296,3 +296,120 @@ if executar:
                 )
                 
                 st.success("Predição de classificação concluída!")
+                tab1, tab2, tab3, tab4 = st.tabs(["Gráficos", "Métricas", "Matriz Confusão", "Exportar"])
+                
+                with tab1:
+                    st.subheader("Classificações vs Tendência Real")
+                    
+                    df_plot = resultados.loc[idx_test]
+                    cols = ['Classe_Real'] + [c for c in df_plot.columns if c.startswith('Classe_')]
+
+                    fig = go.Figure()
+                    
+                    # Classe real
+                    fig.add_trace(go.Scatter(x=df_plot.index,y=df_plot['Classe_Real'],mode='lines+markers',
+                        name='Tendência Real',line=dict(color='black', width=3),marker=dict(size=8)
+                    ))
+                    
+                    # Predições
+                    colors = ['blue', 'red', 'green', 'orange', 'purple']
+                    for i, col in enumerate([c for c in cols if c != 'Classe_Real']):
+                        modelo_name = col.replace('Classe_', '')
+                        fig.add_trace(go.Scatter(x=df_plot.index,y=df_plot[col],
+                                                 mode='markers',name=f'Predição {modelo_name}',
+                                                 marker=dict(color=colors[i % len(colors)], 
+                                                 size=6, opacity=0.7)
+                        ))
+                    
+                    fig.update_layout(
+                        title=f"Classificação de Tendência para {moeda_alvo}",
+                        xaxis_title="Data",
+                        yaxis_title="Tendência (0=Queda, 1=Alta)",
+                        height=600,
+                        yaxis=dict(tickmode='linear', tick0=0, dtick=1)
+                    )
+                    
+                    st.plotly_chart(fig, use_container_width=True)
+                
+                with tab2:
+                    st.subheader("Métricas de classificação")
+                    rows = []
+                    for m, dias in metricas.items():
+                        for d, mets in dias.items():
+                            mets_clean = {k: v for k, v in mets.items() if k != 'matriz_confusao'}
+                            rows.append({"Modelo": m, "Horizonte": f"{d} dias", **mets_clean})
+                    
+                    df_metricas = pd.DataFrame(rows)
+                    st.dataframe(df_metricas, use_container_width=True)
+                    
+                    if len(df_metricas) > 1:
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            fig_acc = px.bar(df_metricas, x='Modelo', y='Acurácia', 
+                                           title='Acurácia por Modelo')
+                            st.plotly_chart(fig_acc, use_container_width=True)
+                        
+                        with col2:
+                            fig_f1 = px.bar(df_metricas, x='Modelo', y='F1', 
+                                          title='F1 Score por Modelo')
+                            st.plotly_chart(fig_f1, use_container_width=True)
+                
+                with tab3:
+                    st.subheader("Matriz de Confusão")
+                    
+                    modelo_selecionado = st.selectbox("Selecione o modelo:", modelos)
+                    
+                    if modelo_selecionado in metricas and dias_pred in metricas[modelo_selecionado]:
+                        if 'matriz_confusao' in metricas[modelo_selecionado][dias_pred]:
+                            cm = metricas[modelo_selecionado][dias_pred]['matriz_confusao']
+                            fig = px.imshow(
+                                cm, 
+                                text_auto=True, 
+                                aspect="auto",
+                                title=f"Matriz de Confusão - {modelo_selecionado}",
+                                labels=dict(x="Predito", y="Real", color="Contagem"),
+                                x=['Queda (0)', 'Alta (1)'],
+                                y=['Queda (0)', 'Alta (1)']
+                            )
+                            st.plotly_chart(fig, use_container_width=True)
+                        else:
+                            st.info("Matriz de confusão não disponível para este modelo")
+                
+                with tab4:
+                    st.subheader("Exportar Resultados")
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.download_button(
+                            "Baixar Classificações (CSV)",
+                            resultados.to_csv().encode(),
+                            "classificacoes.csv",
+                            "text/csv",
+                            use_container_width=True
+                        )
+                    
+                    with col2:
+                        st.download_button(
+                            "Baixar Métricas (CSV)",
+                            df_metricas.to_csv(index=False).encode(),
+                            "metricas_classificacao.csv",
+                            "text/csv",
+                            use_container_width=True
+                        )
+                    
+                    st.subheader("Resumo")
+                    melhor_modelo = df_metricas.loc[df_metricas['Acurácia'].idxmax(), 'Modelo']
+                    melhor_acc = df_metricas['Acurácia'].max()
+                    
+                    st.info(f"""
+                    **Análise de classificação concluída!**
+                    
+                    **Melhor modelo**: {melhor_modelo} (Acurácia = {melhor_acc:.4f})
+                    **Ativos analisados**: {moeda_alvo} + {len(auxiliares)} auxiliares  
+                    **Horizonte**: {dias_pred} dias à frente
+                    **Período**: {inicio.strftime('%d/%m/%Y')} a {fim.strftime('%d/%m/%Y')}
+                    """)
+                    
+            except Exception as e:
+                st.error(f"Erro na predição de classificação: {str(e)}")
