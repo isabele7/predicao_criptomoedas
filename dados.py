@@ -1,6 +1,7 @@
 import yfinance as yf
 import pandas as pd
 
+# 1. Baixar preços de fechamento ajustados de um ativo alvo e preditores dentro de um intervalo
 def montar_dataframe(alvo, preditores, inicio, fim):
     tickers = [alvo] + preditores
     dfs = []
