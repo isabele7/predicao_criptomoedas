@@ -53,3 +53,35 @@ with st.sidebar:
     st.subheader("Configurações de Janelamento")
     n_lags = st.slider("Número de Lags", 3, 20, 7, help="Quantos dias anteriores usar como features")
     ma_window = st.slider("Janela da Média Móvel", 3, 15, 5, help="Tamanho da janela para média móvel")
+
+    st.subheader("Algoritmos")
+    if "Regressão" in tipo_analise:
+        modelos = st.multiselect(
+            "Algoritmos de Regressão", 
+            ['LinearRegression', 'RandomForest', 'SVR', 'KNN', 'MLP'],
+            default=['LinearRegression', 'RandomForest', 'KNN'],
+            help="Selecione os algoritmos para comparação"
+        )
+    else:
+        modelos = st.multiselect(
+            "Algoritmos de Classificação", 
+            ['LogisticRegression', 'RandomForest', 'SVC', 'KNN', 'MLP'],
+            default=['LogisticRegression', 'RandomForest', 'KNN'],
+            help="Selecione os algoritmos para comparação"
+        )
+    
+    st.subheader("Parametrização")
+    with st.expander("Configurações dos Algoritmos"):
+        if 'RandomForest' in modelos:
+            st.write("**Random Forest**")
+            n_trees = st.slider("Número de árvores", 10, 200, 100)
+            max_depth = st.selectbox("Profundidade máxima", [None, 5, 10, 15, 20], index=0)
+        
+        if 'KNN' in modelos:
+            st.write("**K-Nearest Neighbors**")
+            k_neighbors = st.slider("Número de vizinhos (K)", 1, 15, 3)
+        
+        if 'MLP' in modelos:
+            st.write("**Rede Neural (MLP)**")
+            hidden_layers = st.selectbox("Camadas ocultas", ["(50,)", "(50, 25)", "(100, 50)", "(100, 50, 25)"], index=1)
+            max_iter = st.slider("Máx. iterações", 1000, 20000, 10000, step=1000)
