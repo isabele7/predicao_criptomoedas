@@ -244,3 +244,40 @@ if executar:
                             line=dict(color="red", dash="dash")
                         )
                         st.plotly_chart(fig_scatter, use_container_width=True)
+                        
+                with tab4:
+                    st.subheader("Exportar Resultados")
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.download_button(
+                            "Baixar Predições (CSV)",
+                            resultados.to_csv().encode(),
+                            "predicoes_regressao.csv",
+                            "text/csv",
+                            use_container_width=True
+                        )
+                    
+                    with col2:
+                        st.download_button(
+                            "Baixar Métricas (CSV)",
+                            df_metricas.to_csv(index=False).encode(),
+                            "metricas_regressao.csv",
+                            "text/csv",
+                            use_container_width=True
+                        )
+                    
+                    st.subheader("Resumo Executivo")
+                    melhor_modelo = df_metricas.loc[df_metricas['R2'].idxmax(), 'Modelo']
+                    melhor_r2 = df_metricas['R2'].max()
+                    
+                    st.info(f"""
+                    **Análise Concluída!**
+                    **Melhor Modelo**: {melhor_modelo} (R² = {melhor_r2:.4f})
+                    **Ativos Analisados**: {moeda_alvo} + {len(auxiliares)} auxiliares
+                    **Horizonte**: {dias_pred} dias à frente
+                    **Período**: {inicio.strftime('%d/%m/%Y')} a {fim.strftime('%d/%m/%Y')}
+                    """)
+                    
+            except Exception as e:
+                st.error(f"Erro na predição de regressão: {str(e)}")
