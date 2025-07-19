@@ -165,3 +165,82 @@ if executar:
                         height=600,
                         showlegend=True
                     )
+                    st.plotly_chart(fig, use_container_width=True)
+
+                    st.subheader("Análise de Erros")
+                    fig_erro = go.Figure()
+                    
+                    for col in [c for c in cols if c != 'Real']:
+                        erro = df_plot[col] - df_plot['Real']
+                        fig_erro.add_trace(go.Scatter(
+                            x=df_plot.index,
+                            y=erro,
+                            mode='lines',
+                            name=f'Erro {col}',
+                            hovertemplate=f'<b>Erro {col}</b><br>Data: %{{x}}<br>Erro: $%{{y:.2f}}<extra></extra>'
+                        ))
+                    
+                    fig_erro.add_hline(y=0, line_dash="dash", line_color="black")
+                    
+                    fig_erro.update_layout(
+                        title="Erro de Predição por Modelo",
+                        xaxis_title="Data",
+                        yaxis_title="Erro (Predição - Real)",
+                        height=400
+                    )
+                    
+                    st.plotly_chart(fig_erro, use_container_width=True)
+                
+                with tab2:
+                    st.subheader("Métricas de desempenho")
+
+                    rows = []
+                    for m, dias in metricas.items():
+                        for d, mets in dias.items():
+                            rows.append({"Modelo": m, "Horizonte": f"{d} dias", **mets})
+                    
+                    df_metricas = pd.DataFrame(rows)
+                    st.dataframe(df_metricas, use_container_width=True)
+
+                    if len(df_metricas) > 1:
+                        col1, col2, col3 = st.columns(3)
+                        
+                        with col1:
+                            fig_mae = px.bar(df_metricas, x='Modelo', y='MAE', 
+                                           title='Mean Absolute Error (MAE)')
+                            st.plotly_chart(fig_mae, use_container_width=True)
+                        
+                        with col2:
+                            fig_r2 = px.bar(df_metricas, x='Modelo', y='R2', 
+                                          title='R² Score')
+                            st.plotly_chart(fig_r2, use_container_width=True)
+                        
+                        with col3:
+                            if 'Acurácia_Direcional' in df_metricas.columns:
+                                fig_dir = px.bar(df_metricas, x='Modelo', y='Acurácia_Direcional', 
+                                               title='Acurácia Direcional')
+                                st.plotly_chart(fig_dir, use_container_width=True)
+                
+                with tab3:
+                    st.subheader("Comparação detalhada")
+
+                    modelo_comparar = st.selectbox("Selecione um modelo para análise:", modelos)
+                    
+                    if modelo_comparar:
+                        df_modelo = df_plot[['Real', modelo_comparar]].dropna()
+
+                        fig_scatter = px.scatter(
+                            x=df_modelo['Real'], 
+                            y=df_modelo[modelo_comparar],
+                            title=f'Real vs Predito - {modelo_comparar}',
+                            labels={'x': 'Valor Real', 'y': 'Valor Predito'}
+                        )
+                        fig_scatter.add_shape(
+                            type="line",
+                            x0=df_modelo['Real'].min(),
+                            x1=df_modelo['Real'].max(),
+                            y0=df_modelo['Real'].min(),
+                            y1=df_modelo['Real'].max(),
+                            line=dict(color="red", dash="dash")
+                        )
+                        st.plotly_chart(fig_scatter, use_container_width=True)
