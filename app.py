@@ -126,3 +126,42 @@ if executar:
                     params=params
                 )   
                 st.success("Predição de regressão concluída!")
+                
+                tab1, tab2, tab3, tab4 = st.tabs(["Gráficos", "Métricas", "Comparação", "Exportar"])
+                
+                with tab1:
+                    st.subheader("Predições vs Valores Reais")
+                    df_plot = resultados.loc[idx_test]
+                    cols = ['Real'] + [c for c in df_plot.columns if any(m in c for m in modelos)]
+                    
+                    fig = go.Figure()
+                    
+                    # Linha real
+                    fig.add_trace(go.Scatter(
+                        x=df_plot.index,
+                        y=df_plot['Real'],
+                        mode='lines',
+                        name='Valor Real',
+                        line=dict(color='black', width=3),
+                        hovertemplate='<b>Real</b><br>Data: %{x}<br>Valor: $%{y:.2f}<extra></extra>'
+                    ))
+                    # Predições
+                    colors = ['blue', 'red', 'green', 'orange', 'purple', 'brown']
+                    for i, col in enumerate([c for c in cols if c != 'Real']):
+                        fig.add_trace(go.Scatter(
+                            x=df_plot.index,
+                            y=df_plot[col],
+                            mode='lines',
+                            name=f'Predição {col}',
+                            line=dict(color=colors[i % len(colors)], width=2, dash='dot'),
+                            hovertemplate=f'<b>{col}</b><br>Data: %{{x}}<br>Valor: $%{{y:.2f}}<extra></extra>'
+                        ))
+                    
+                    fig.update_layout(
+                        title=f"Predições para {moeda_alvo} - Horizonte de {dias_pred} dias",
+                        xaxis_title="Data",
+                        yaxis_title="Preço (USD)",
+                        hovermode='x unified',
+                        height=600,
+                        showlegend=True
+                    )
