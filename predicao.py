@@ -78,3 +78,67 @@ def predicao_regressao(df, target_col, dias_a_frente=1, modelo_nome='LinearRegre
     r2 = r2_score(y_test, y_pred)
 
     return y_test, y_pred, {'MAE': round(mae, 4), 'MSE': round(mse, 4), 'R2': round(r2, 4)}
+
+def predicao_classificacao(df, target_col, dias_a_frente=1, modelo_nome='LogisticRegression',
+                         modelo_params=None, n_lags=7, ma_window=5):
+
+    # Gera as features (lags, médias móveis e retornos)
+    df_feat = criar_features(df, target_col, n_lags=n_lags, ma_window=ma_window)
+
+    # Cria a variável target binária: 1 (subida) ou 0 (queda)
+    df_feat["target"] = (df_feat[target_col].shift(-dias_a_frente) > df_feat[target_col]).astype(int)
+
+    df_feat = df_feat.dropna()
+
+    # Define X (entradas) e y (rótulos)
+    X = df_feat.drop(columns=[target_col, 'target'])
+    y = df_feat['target']
+
+    # Separa conjunto de treino (75%) e teste (25%)
+    split = int(0.75 * len(df_feat))
+    X_train, X_test = X.iloc[:split], X.iloc[split:]
+    y_train, y_test = y.iloc[:split], y.iloc[split:]
+
+    # Normaliza os dados
+    scaler_X = StandardScaler().fit(X_train)
+    X_train_s = scaler_X.transform(X_train)
+    X_test_s = scaler_X.transform(X_test)
+
+    modelos = {
+        'LogisticRegression': LogisticRegression(max_iter=20000, solver='saga', random_state=42),
+        'RandomForest': RandomForestClassifier(n_estimators=100, random_state=42),
+        'SVC': SVC(probability=True, random_state=42, max_iter=10000, class_weight='balanced', C=1.0, kernel='rbf'),
+        'KNN': KNeighborsClassifier(n_neighbors=7, weights='distance', metric='euclidean'),
+        'MLP': MLPClassifier(max_iter=3000, random_state=42, hidden_layer_sizes=(50, 25))
+    }
+
+    # Seleciona o modelo
+    modelo = modelos.get(modelo_nome, LogisticRegression())
+
+    # Atualiza o modelo com os parâmetros passados
+    if modelo_params:
+        modelo.set_params(**modelo_params)
+
+    # Treinamento e predição
+    if modelo_nome in ['SVC', 'MLP']:
+        modelo.fit(X_train_s, y_train)
+        y_pred = modelo.predict(X_test_s)
+    else:
+        modelo.fit(X_train, y_train)
+        y_pred = modelo.predict(X_test)
+
+    acc = accuracy_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
+    precision = precision_score(y_test, y_pred)
+    recall = recall_score(y_test, y_pred)
+    
+    # Matriz de confusão
+    cm = confusion_matrix(y_test, y_pred)
+
+    return y_test, y_pred, {
+        'Acurácia': round(acc, 4), 
+        'F1': round(f1, 4), 
+        'Precisão': round(precision, 4), 
+        'Recall': round(recall, 4),
+        'matriz_confusao': cm
+    }
