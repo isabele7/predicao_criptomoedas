@@ -146,3 +146,9 @@ def predicao_classificacao(df, target_col, dias_a_frente=1, modelo_nome='Logisti
         'Recall': round(recall, 4),
         'matriz_confusao': cm
     }
+
+def executar_predicao(df, target_col, dias_a_frente=1, modelo='LinearRegression', prever_retorno=True, classificacao=False, n_lags=7, ma_window=5, modelo_params=None):
+    if classificacao:
+        return predicao_classificacao(df, target_col, dias_a_frente, modelo_nome=modelo, modelo_params=modelo_params, n_lags=n_lags, ma_window=ma_window)
+    else:
+        return predicao_regressao(df, target_col, dias_a_frente, modelo_nome=modelo, prever_retorno=prever_retorno, modelo_params=modelo_params, n_lags=n_lags, ma_window=ma_window)
