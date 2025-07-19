@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from dados import montar_dataframe
+from predicao import predizer_regressao, predizer_classificacao
 
 st.set_page_config(page_title="Sistema de Predição de Criptomoedas", layout="wide")
 st.title("Sistema de predição de criptomoedas")
@@ -85,3 +86,43 @@ with st.sidebar:
             st.write("**Rede Neural (MLP)**")
             hidden_layers = st.selectbox("Camadas ocultas", ["(50,)", "(50, 25)", "(100, 50)", "(100, 50, 25)"], index=1)
             max_iter = st.slider("Máx. iterações", 1000, 20000, 10000, step=1000)
+
+st.markdown("---")
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    executar = st.button("Executar Predição", use_container_width=True, type="primary")
+
+if executar:
+    params = {}
+    if 'RandomForest' in modelos:
+        params['RandomForest'] = {
+            'n_estimators': locals().get('n_trees', 100),
+            'max_depth': locals().get('max_depth', None)
+        }
+    if 'KNN' in modelos:
+        params['KNN'] = {'n_neighbors': locals().get('k_neighbors', 3)}
+    if 'MLP' in modelos:
+        hidden_size = eval(locals().get('hidden_layers', '(50, 25)'))
+        params['MLP'] = {
+            'hidden_layer_sizes': hidden_size,
+            'max_iter': locals().get('max_iter', 10000)
+        }
+    
+    with st.spinner("Carregando dados..."):
+        df = montar_dataframe(moeda_alvo, auxiliares, inicio.isoformat(), fim.isoformat())
+        st.success(f"Dados carregados: {len(df)} registros de {df.index.min().strftime('%d/%m/%Y')} até {df.index.max().strftime('%d/%m/%Y')}")
+    
+    # Executar predição
+    if "Regressão" in tipo_analise:
+        with st.spinner("Executando modelos de regressão..."):
+            try:
+                resultados, metricas, idx_test = predizer_regressao(
+                    df=df,
+                    target_col=moeda_alvo,
+                    dias_previsao=dias_pred,
+                    modelos_escolhidos=modelos,
+                    n_lags=n_lags,
+                    ma_window=ma_window,
+                    params=params
+                )   
+                st.success("Predição de regressão concluída!")
