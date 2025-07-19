@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 from dados import montar_dataframe
 from predicao import predizer_regressao, predizer_classificacao
 
